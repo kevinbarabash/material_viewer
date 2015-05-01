@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title></title>
+    <style>
+        body {
+            margin:0;
+        }
+
+        div#materials {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 640px;
+        }
+
+        img {
+            width: 48px;
+            height: 48px;
+            margin: 4px;
+            padding: 0;
+            border: solid 1px white;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+<div id="materials">
+
+</div>
+</body>
+</html>
+<script src="three.min.js"></script>
+<script id="vertShader" type="shader">
+varying vec3 vNormal;
+
+void main() {
+    vec3 transformedNormal = normalMatrix * normal;
+    vNormal = normalize(transformedNormal);
+
+    gl_Position = projectionMatrix *
+                  modelViewMatrix * vec4(position, 1.0 );
+}
+</script>
+<script id="fragShader" type="shader">
+precision highp float;
+
+varying vec3 vNormal;
+uniform float color;
+uniform sampler2D uTex;
+
+void main(void) {
+    float opacity = 1.0;
+    vec2 uv = 0.5 * vec2(vNormal) + 0.5;
+    vec4 col = texture2D(uTex, uv);
+    //gl_FragColor = vec4( 0.5 * vNormal + 0.5, opacity );
+    gl_FragColor = col;
+}
+</script>
+<script>
+    var scene = new THREE.Scene();
+    var camera = new THREE.PerspectiveCamera(30, window.innerWidth/window.innerHeight, 0.1, 1000);
+
+    var renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearColor(new THREE.Color(0.5,0.5,0.5), 1);
+    document.body.appendChild(renderer.domElement);
+
+    var loader = new THREE.JSONLoader();
+    var teapot = null;
+
+
+    var material = new THREE.ShaderMaterial({
+        uniforms: {
+            color: { type: 'f', value: 1.0 },
+            uTex: { type: "t", value: THREE.ImageUtils.loadTexture( "materials/mat (14).png" ) }
+        },
+        vertexShader: document.
+                getElementById('vertShader').text,
+        fragmentShader: document.
+                getElementById('fragShader').text
+    });
+
+//    material = new THREE.MeshNormalMaterial();
+//    material.shading = THREE.FlatShading;
+
+    loader.load('teapot.json', function (geometry) {
+
+//        geometry = new THREE.SphereGeometry(2.0, 16, 8);
+//        geometry = new THREE.TorusGeometry(1.5, 0.5, 32, 64);
+        geometry = new THREE.TorusKnotGeometry(1.5, 0.5, 256, 32);
+
+        geometry.computeFaceNormals();
+        geometry.computeVertexNormals();
+
+        teapot = new THREE.Mesh(geometry, material);
+        teapot.position.x = 3;
+//        teapot.position.z = -2;
+
+        teapot.rotation.x = 1;
+        scene.add(teapot);
+
+        render();
+    });
+
+    camera.position.z = 15;
+
+    var render = function () {
+        requestAnimationFrame(render);
+
+        teapot.rotation.x += 0.01;
+        teapot.rotation.y += 0.01;
+
+        renderer.render(scene, camera);
+    };
+
+
+    function createCallback(filename) {
+        return function (e) {
+            material.uniforms.uTex.value = THREE.ImageUtils.loadTexture(filename);
+        };
+    }
+
+    var materialsContainer = document.getElementById('materials');
+    for (var i = 0; i < 107; i++) {
+        var img = document.createElement('img');
+        var filename = "materials/mat (" + (i+1) + ").png";
+        img.src = filename;
+        img.addEventListener('click', createCallback(filename));
+        materialsContainer.appendChild(img);
+    }
+
+
+
+</script>
